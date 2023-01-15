@@ -86,6 +86,8 @@ def direct_link_generator(link: str):
         return rock(link)
     elif is_try2link_link(link):
         return try2link(link)
+    elif 'terabox.com' in link:
+        return terabox(link)  
     elif is_ez4_link(link):
         return ez4(link)
     elif any(x in link for x in fmed_list):
@@ -662,4 +664,25 @@ def udrive(url: str) -> str:
     info_parsed['src_url'] = url
     flink = info_parsed['gdrive_url']
 
-    return flink 
+    return flink  
+  
+    def terabox(url) -> str:
+    if not path.isfile('terabox.txt'):
+        raise DirectDownloadLinkException("ERROR: terabox.txt not found")
+    try:
+        session = rsession()
+        res = session.request('GET', url)
+        key = res.url.split('?surl=')[-1]
+        jar = MozillaCookieJar('terabox.txt')
+        jar.load()
+        session.cookies.update(jar)
+        res = session.request('GET', f'https://www.terabox.com/share/list?app_id=250528&shorturl={key}&root=1')
+        result = res.json()['list']
+    except Exception as e:
+        raise DirectDownloadLinkException(f"ERROR: {e.__class__.__name__}")
+    if len(result) > 1:
+        raise DirectDownloadLinkException("ERROR: Can't download mutiple files")
+    result = result[0]
+    if result['isdir'] != '0':
+        raise DirectDownloadLinkException("ERROR: Can't download folder")
+    return result['dlink']
